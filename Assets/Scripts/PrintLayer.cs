@@ -4,5 +4,12 @@ using UnityEngine;
 
 public class PrintLayer : MonoBehaviour
 {
-    public bool LayerDone;
+    public BoxCollider[] controlLines { get; private set; }
+    public SphereCollider[] controlPoints { get; private set; }
+
+    private void Awake()
+    {
+        controlLines = GetComponentsInChildren<BoxCollider>();
+        controlPoints = GetComponentsInChildren<SphereCollider>();
+    }
 }

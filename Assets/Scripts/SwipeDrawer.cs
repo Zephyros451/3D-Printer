@@ -6,11 +6,22 @@ public class SwipeDrawer : MonoBehaviour
 {
     [SerializeField] private GameObject cursor;
     [SerializeField] private GameObject cubePrefab;
-    [SerializeField] private GameObject currentLayer;
+    [SerializeField] private LayerController layerController;
+    [SerializeField] private GameObject[] layers;
 
     private Vector3 currentCursorPosition;
     private Vector3 lastCursorPosition;
     private Vector3 lastPointPosition = Vector3.zero;
+
+    private Vector3 CursorDirection
+    {
+        get
+        {
+            Vector3 currentDirection = currentCursorPosition - lastPointPosition;
+            currentDirection.y = 0f;
+            return currentDirection;
+        }
+    }
 
     private Camera mainCamera;
 
@@ -33,16 +44,15 @@ public class SwipeDrawer : MonoBehaviour
     {
         if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Moved)
         {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit, 100))
             {
-                if (hit.collider.gameObject.TryGetComponent(out PrintLayer currentLayer))
+                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out RaycastHit hit, 100))
                 {
-                    if (currentLayer != null && currentLayer.LayerDone)
+                    if (hit.collider.CompareTag("CurrentPrintLayer"))
                     {
-                        Vector3 newPosition = new Vector3(Input.GetTouch(0).position.x, CurrentLayerHeight, Input.GetTouch(0).position.y);
-                        Quaternion newRotation = Quaternion.LookRotation(Input.GetTouch(0).deltaPosition, transform.up);
-                        cursor.transform.position = newPosition;
+                        currentCursorPosition = hit.point;
+                        Quaternion newRotation = Quaternion.LookRotation(Input.GetTouch(0).deltaPosition, Vector3.zero);
+                        cursor.transform.position = currentCursorPosition;
                         cursor.transform.rotation = newRotation;
                     }
                 }
@@ -53,16 +63,12 @@ public class SwipeDrawer : MonoBehaviour
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100))
             {
-                if (hit.collider.gameObject.TryGetComponent(out PrintLayer currentLayer))
+                if (hit.collider.CompareTag("CurrentPrintLayer"))
                 {
-                    if (currentLayer != null && currentLayer.LayerDone)
-                    {
                         currentCursorPosition = hit.point;
-                        Vector3 newPosition = new Vector3(currentCursorPosition.x, CurrentLayerHeight, currentCursorPosition.z);
-                        Quaternion newRotation = Quaternion.LookRotation(currentCursorPosition - lastCursorPosition, transform.up);
-                        cursor.transform.position = newPosition;
-                        cursor.transform.rotation = newRotation;                        
-                    }
+                        Quaternion newRotation = Quaternion.LookRotation(CursorDirection, Vector3.zero);
+                        cursor.transform.position = currentCursorPosition;
+                        cursor.transform.rotation = newRotation;
                 }
             }
         }
@@ -72,20 +78,14 @@ public class SwipeDrawer : MonoBehaviour
     {
         if (lastCursorPosition != Vector3.zero)
         {
-            float distanceBetweenPoints = (currentCursorPosition - lastPointPosition).magnitude;
+            float distanceBetweenPoints = CursorDirection.magnitude;
 
-            if (distanceBetweenPoints > 0.08f) 
+            if (distanceBetweenPoints > 0.05f) 
             {
-                Vector3 newPosition = new Vector3(currentCursorPosition.x, CurrentLayerHeight, currentCursorPosition.z);
-                Quaternion newRotation = Quaternion.LookRotation(currentCursorPosition - lastPointPosition, transform.up);
-                Instantiate(cubePrefab, newPosition, newRotation, currentLayer.transform);
+                Quaternion newRotation = Quaternion.LookRotation(CursorDirection, Vector3.zero);
+                Instantiate(cubePrefab, currentCursorPosition, newRotation, layers[layerController.CurrentLayerIndex].transform);
                 lastPointPosition = currentCursorPosition;
             }
         }
-    }
-
-    public void NextLayer()
-    {
-        CurrentLayerHeight += 0.1f;
     }
 }
